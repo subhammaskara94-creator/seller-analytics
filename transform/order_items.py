@@ -3,10 +3,10 @@ def flatten_order_item(item: dict) -> dict:
         "order_item_id": item.get("OrderItemId"),
         "asin": item.get("ASIN"),
         "seller_sku": item.get("SellerSKU"),
-        "title": item.get("Title"),
+        "product_name": item.get("Title"),
         "quantity_ordered": item.get("QuantityOrdered"),
         "quantity_shipped": item.get("QuantityShipped"),
-        "item_price": float(
+        "selling_price": float(
             item.get("ItemPrice", {}).get("Amount", 0)
         ),
         "promotion_discount": float(

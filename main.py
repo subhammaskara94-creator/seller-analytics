@@ -1,39 +1,45 @@
 from amazon.orders import OrdersClient
 from amazon.finances import FinancesClient
-from transform.financial_events import flatten_financial_events
 
-import pandas as pd
+from pipelines.order_pipeline import build_gold_orders
 
 
 def main():
 
+    print("Connecting to Amazon...\n")
+
     orders_client = OrdersClient()
     finance_client = FinancesClient()
 
-    # Get a recent non-cancelled order
     response = orders_client.get_recent_orders(days=30)
 
-    orders = response.payload["Orders"]
-
-    order = next(
-        (o for o in orders if o["OrderStatus"] != "Canceled"),
-        orders[0]
+    orders = response.payload.get(
+        "Orders",
+        [],
     )
 
-    print(f"Testing Order: {order['AmazonOrderId']}")
+    print(f"Retrieved {len(orders)} orders.\n")
 
-    financials = finance_client.get_order_financial_events(
-        order["AmazonOrderId"]
+    gold_df = build_gold_orders(
+        orders,
+        orders_client,
+        finance_client,
     )
 
-    rows = flatten_financial_events(financials.payload)
+    print("\n========== GOLD ORDERS ==========\n")
 
-    print(f"\nParsed {len(rows)} financial rows\n")
+    print(gold_df.head())
 
-    df = pd.DataFrame(rows)
+    print("\n")
 
-    print(df)
+    print(gold_df.info())
 
+    print("\n========== PIPELINE SUMMARY ==========\n")
+
+    print(f"Orders Retrieved       : {len(orders)}")
+    print(f"Gold Rows Created      : {len(gold_df)}")
+    print(f"Cancelled Orders       : (calculate this)")
+    print(f"Skipped (API Errors)   : (calculate this)")
 
 if __name__ == "__main__":
     main()
