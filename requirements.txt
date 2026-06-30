@@ -1,0 +1,6 @@
+python-amazon-sp-api
+gspread
+google-auth
+google-auth-oauthlib
+python-dotenv
+pandas
