@@ -1,5 +1,6 @@
 from amazon.orders import OrdersClient
-from transform.silver import build_order_item
+from amazon.finances import FinancesClient
+from transform.financial_events import flatten_financial_events
 
 import pandas as pd
 
@@ -7,36 +8,31 @@ import pandas as pd
 def main():
 
     orders_client = OrdersClient()
+    finance_client = FinancesClient()
 
-    # Get recent orders
+    # Get a recent non-cancelled order
     response = orders_client.get_recent_orders(days=30)
-    orders = response.payload.get("Orders", [])
 
-    print(f"\nFound {len(orders)} orders.\n")
+    orders = response.payload["Orders"]
 
-    # Pick first non-cancelled order
     order = next(
         (o for o in orders if o["OrderStatus"] != "Canceled"),
         orders[0]
     )
 
-    # Get order items
-    items_response = orders_client.get_order_items(
+    print(f"Testing Order: {order['AmazonOrderId']}")
+
+    financials = finance_client.get_order_financial_events(
         order["AmazonOrderId"]
     )
 
-    items = items_response.payload["OrderItems"]
+    rows = flatten_financial_events(financials.payload)
 
-    # Build ONE silver row
-    silver_order = build_order_item(
-        order,
-        items[0]
-    )
+    print(f"\nParsed {len(rows)} financial rows\n")
 
-    # Display nicely
-    df = pd.DataFrame([silver_order])
+    df = pd.DataFrame(rows)
 
-    print(df.T)
+    print(df)
 
 
 if __name__ == "__main__":

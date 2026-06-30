@@ -48,3 +48,16 @@ tests/         Unit tests
 
 ### Sprint 6
 - [ ] Automation
+
+Current Status
+
+✅ SP-API Authentication
+✅ Orders Extraction
+✅ Order Items Extraction
+✅ Financial Events Extraction
+✅ Silver Order Item Transformation
+✅ Silver Financial Ledger Transformation
+⬜ Gold Profitability Engine
+⬜ CSV Export
+⬜ Google Sheets Sync
+⬜ Daily Automation
