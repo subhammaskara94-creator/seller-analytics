@@ -2,6 +2,7 @@ from amazon.orders import OrdersClient
 from amazon.finances import FinancesClient
 
 from pipelines.order_pipeline import build_gold_orders
+from reports.profitability import summarize_by_asin
 
 
 def main():
@@ -26,20 +27,44 @@ def main():
         finance_client,
     )
 
-    print("\n========== GOLD ORDERS ==========\n")
+    print(
+        gold_df[
+            [
+                "amazon_order_id",
+                "settlement_status",
+                "order_outcome",
+                "amazon_net_revenue",
+                "total_landed_cost",
+                "ecommerce_profit",
+            ]
+        ].head(20)
+    )
 
-    print(gold_df.head())
+#     pygmy = gold_df[
+#     gold_df["asin"] == "B08VRGH6NM"
+# ]
 
-    print("\n")
+#     print(
+#         pygmy[
+#             [
+#                 "amazon_order_id",
+#                 "order_status",
+#                 "financial_status",
+#                 "gross_sales",
+#                 "amazon_net_revenue",
+#                 "ecommerce_profit",
+#             ]
+#         ]
+#     )
 
-    print(gold_df.info())
+    # order_id = "408-9997704-8934743"
 
-    print("\n========== PIPELINE SUMMARY ==========\n")
+    # financials = finance_client.get_order_financial_events(order_id)
 
-    print(f"Orders Retrieved       : {len(orders)}")
-    print(f"Gold Rows Created      : {len(gold_df)}")
-    print(f"Cancelled Orders       : (calculate this)")
-    print(f"Skipped (API Errors)   : (calculate this)")
+    # from utils.pretty import show 
+
+    # show(financials.payload)
+
 
 if __name__ == "__main__":
     main()

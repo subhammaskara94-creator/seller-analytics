@@ -79,7 +79,6 @@ def calculate_financial_summary(metrics):
 
     return summary
 
-
 def build_gold_order(
     silver_order,
     financial_summary,
@@ -87,22 +86,105 @@ def build_gold_order(
 ):
     """
     Build a Gold Order row.
-
-    Pricing is optional for now. It will be joined in the next commit.
     """
 
     gold = silver_order.copy()
 
+    # Add all financial metrics
     gold.update(financial_summary)
 
+    # Add pricing attributes
     pricing = pricing or {}
 
     gold["landed_cost"] = pricing.get("landed_cost")
     gold["offline_selling_price"] = pricing.get("offline_selling_price")
+    gold["mrp"] = pricing.get("mrp")
+    gold["supplier"] = pricing.get("supplier")
+    gold["remarks"] = pricing.get("remarks")
 
-    # Placeholder fields (next commit)
-    gold["ecommerce_profit"] = None
-    gold["offline_profit"] = None
-    gold["channel_premium"] = None
+    # --------------------------------------------------
+    # Settlement Status
+    # --------------------------------------------------
+
+    gold["settlement_status"] = (
+        "SETTLED"
+        if financial_summary["gross_sales"] != 0
+        else "PENDING"
+    )
+
+    # --------------------------------------------------
+    # Business Outcome
+    # --------------------------------------------------
+
+    gold["order_outcome"] = "COMPLETED"
+
+    # Fully refunded order
+    if (
+        financial_summary["gross_sales"] > 0
+        and financial_summary["net_sales"] == 0
+    ):
+        gold["order_outcome"] = "RETURNED"
+
+    # Settlement not yet generated
+    if gold["settlement_status"] == "PENDING":
+        gold["order_outcome"] = "PENDING_SETTLEMENT"
 
     return gold
+
+def calculate_profitability(gold_order):
+    """
+    Calculate profitability metrics for a Gold Order.
+    """
+
+    order = gold_order.copy()
+
+    landed_cost = order.get("landed_cost")
+    offline_price = order.get("offline_selling_price")
+
+    # Initialize output columns for every row
+    order["total_landed_cost"] = None
+    order["offline_revenue"] = None
+    order["ecommerce_profit"] = None
+    order["offline_profit"] = None
+    order["channel_premium"] = None
+    
+    # If pricing is unavailable, skip calculations
+    if landed_cost is None or offline_price is None:
+        return order
+    
+    # Don't calculate profitability until Amazon has settled the order
+    if order["settlement_status"] == "PENDING":
+        return order
+
+    if order["order_outcome"] == "COMPLETED":
+
+        order["total_landed_cost"] = (
+            landed_cost
+            * order["quantity_ordered"]
+        )
+
+    else:
+
+        order["total_landed_cost"] = 0
+
+    order["offline_revenue"] = (
+        offline_price
+        * order["quantity_ordered"]
+    )
+
+    order["ecommerce_profit"] = (
+        order["amazon_net_revenue"]
+        - order["total_landed_cost"]
+    )
+
+    order["offline_profit"] = (
+        order["offline_revenue"]
+        - order["total_landed_cost"]
+    )
+
+    order["channel_premium"] = (
+        order["ecommerce_profit"]
+        - order["offline_profit"]
+    )
+
+    return order

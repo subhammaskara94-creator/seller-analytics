@@ -7,8 +7,13 @@ from services.profitability import (
     aggregate_ledger,
     calculate_financial_summary,
     build_gold_order,
+    calculate_profitability,
 )
 
+from services.pricing import (
+    load_pricing_history,
+    find_effective_price,
+)
 
 def build_gold_orders(
     orders,
@@ -19,6 +24,7 @@ def build_gold_orders(
     Build a Gold Orders DataFrame for all non-cancelled orders.
     """
 
+    pricing_df = load_pricing_history()
     gold_orders = []
 
     for order in orders:
@@ -54,6 +60,7 @@ def build_gold_orders(
             financial_summary = calculate_financial_summary(
                 ledger
             )
+            financial_summary["financial_status"] = "COMPLETE"
 
             # Build one Gold row per item
             for item in items:
@@ -63,9 +70,20 @@ def build_gold_orders(
                     item,
                 )
 
+                pricing = find_effective_price(
+                    asin=silver_order["asin"],
+                    purchase_date=silver_order["purchase_date"],
+                    pricing_df=pricing_df,
+                )
+
                 gold_order = build_gold_order(
                     silver_order,
                     financial_summary,
+                    pricing,
+                )
+
+                gold_order = calculate_profitability(
+                    gold_order
                 )
 
                 gold_orders.append(
@@ -77,5 +95,7 @@ def build_gold_orders(
             print(
                 f"Skipping Order {order['AmazonOrderId']} -> {e}"
             )
+
+            continue
 
     return pd.DataFrame(gold_orders)
